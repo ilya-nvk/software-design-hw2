@@ -1,1 +1,1 @@
-[{"items":{},"status":"READY","preparationTimeMin":0,"price":0.0},{"items":{},"status":"READY","preparationTimeMin":0,"price":0.0}]
+[{"id":1,"username":"client","time":1709806598672,"status":3,"items":"Burger;150.0;5;1"},{"id":2,"username":"client","time":1709806699748,"status":4,"items":"Pasta;300.0;15;1"},{"id":3,"username":"client","time":1709806830363,"status":3,"items":"Ramen;500.0;20;1"}]

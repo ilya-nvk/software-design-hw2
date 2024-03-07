@@ -1,8 +1,8 @@
 package com.ilyanvk.presentation
 
+import com.ilyanvk.domain.model.util.OrderStatus
 import com.ilyanvk.domain.repository.OrderRepository
 import com.ilyanvk.domain.service.MenuService
-import kotlin.system.exitProcess
 
 class AdminUI(
     private val menuItemService: MenuService,
@@ -12,7 +12,11 @@ class AdminUI(
     fun start() {
         while (true) {
             printMenu()
-            handleChoice(inputReader.readChoice())
+            try {
+                handleChoice(inputReader.readChoice())
+            } catch (e: ExitProfileException) {
+                return
+            }
         }
     }
 
@@ -26,6 +30,8 @@ class AdminUI(
                 5 -> exit()
                 else -> println("Invalid choice")
             }
+        } catch (e: ExitProfileException) {
+            throw e
         } catch (e: Exception) {
             println("Error: ${e.message}")
         }
@@ -89,13 +95,13 @@ class AdminUI(
                 println("${index + 1}. $order")
             }
             println("Total orders: ${orders.size}")
-            println("Total revenue: ${orders.sumOf { it.price }}")
+            println("Total revenue: ${orders.filter { it.status == OrderStatus.PAYED }.sumOf { it.price }}")
         }
     }
 
     private fun exit() {
         println("Goodbye")
-        exitProcess(0)
+        throw ExitProfileException()
     }
 
     private fun printMenu() {

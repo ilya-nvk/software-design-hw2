@@ -8,6 +8,10 @@ class OrderRepositoryImpl(
     private val dao: GenericDao<Order>
 ) : OrderRepository {
     override fun placeOrder(order: Order) = dao.add(order)
+    override fun updateOrder(order: Order) {
+        dao.getAll().find { it.id == order.id }?.let { dao.delete(it) }
+        dao.add(order)
+    }
 
     override fun getAllOrders(): List<Order> = dao.getAll()
 }

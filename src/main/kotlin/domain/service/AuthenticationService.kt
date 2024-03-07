@@ -7,4 +7,5 @@ interface AuthenticationService {
     fun getCurrentUser(): User?
     fun authenticate(username: String, password: String): User
     fun register(username: String, password: String, userType: UserType): User
+    fun logout()
 }

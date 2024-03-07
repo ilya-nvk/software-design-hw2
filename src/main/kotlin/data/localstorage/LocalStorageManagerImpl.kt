@@ -7,9 +7,9 @@ import java.io.IOException
 
 class LocalStorageManagerImpl<T>(
     private val fileName: String,
+    private val gson: Gson,
     private val typeToken: TypeToken<T>,
 ) : LocalStorageManager<T> {
-    private val gson = Gson()
 
     override fun writeToFile(data: T) {
         try {
@@ -25,6 +25,7 @@ class LocalStorageManagerImpl<T>(
             val jsonString = File(RESOURCES_PATH + fileName).readText()
             gson.fromJson(jsonString, typeToken.type)
         } catch (e: Exception) {
+            println(e)
             null
         }
     }

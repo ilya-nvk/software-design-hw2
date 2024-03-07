@@ -12,13 +12,17 @@ class CommonUI(
     private val authenticationService: AuthenticationService,
 ) {
     fun start() {
-        while (authenticationService.getCurrentUser() == null) {
-            authenticate()
-        }
-        if (authenticationService.getCurrentUser()?.userType == UserType.CLIENT) {
-            clientUI.start()
-        } else {
-            adminUI.start()
+        while (true) {
+            while (authenticationService.getCurrentUser() == null) {
+                authenticate()
+            }
+            val user = authenticationService.getCurrentUser()
+            if (user?.userType == UserType.CLIENT) {
+                clientUI.start(user)
+            } else {
+                adminUI.start()
+            }
+            authenticationService.logout()
         }
     }
 

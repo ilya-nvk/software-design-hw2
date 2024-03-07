@@ -1,21 +1,27 @@
 package presentation
 
-import com.ilyanvk.domain.model.Order
+import com.ilyanvk.domain.model.User
 import com.ilyanvk.domain.service.MenuService
 import com.ilyanvk.domain.service.OrderBuilder
 import com.ilyanvk.domain.service.OrderService
+import com.ilyanvk.presentation.ExitProfileException
 import com.ilyanvk.presentation.InputReader
-import kotlin.system.exitProcess
 
-class ClientUI (
+class ClientUI(
     private val menuService: MenuService,
     private val orderService: OrderService,
-    private val inputReader: InputReader
+    private val inputReader: InputReader,
 ) {
-    fun start() {
+    private lateinit var client: User
+    fun start(client: User) {
+        this.client = client
         while (true) {
             printMenu()
-            handleChoice(inputReader.readChoice())
+            try {
+                handleChoice(inputReader.readChoice())
+            } catch (e: ExitProfileException) {
+                return
+            }
         }
     }
 
@@ -25,18 +31,37 @@ class ClientUI (
                 1 -> makeOrder()
                 2 -> seeMyCurrentOrders()
                 3 -> cancelOrder()
-                4 -> exit()
+                4 -> payForOrders()
+                5 -> exit()
                 else -> println("Invalid choice")
             }
+        } catch (e: ExitProfileException) {
+            throw e
         } catch (e: Exception) {
             println("Error: ${e.message}")
+        }
+    }
+
+    private fun payForOrders() {
+        val orders = orderService.getOrdersToPay(client.username)
+        if (orders.isEmpty()) {
+            println("You have no orders to pay")
+        } else {
+            for ((index, order) in orders.withIndex()) {
+                println("${index + 1}. $order")
+            }
+            println("Total: ${orders.sumOf { it.price }}")
+            println("Type anything to pay: ")
+            readln()
+            orders.forEach { orderService.payForOrder(it) }
+            println("You payed successfully!")
         }
     }
 
     private fun cancelOrder() {
         val orders = orderService.getCookingOrders()
         if (orders.isEmpty()) {
-            println("You have no current orders")
+            println("You have no cooking orders")
         } else {
             for ((index, order) in orders.withIndex()) {
                 println("${index + 1}. $order")
@@ -53,14 +78,14 @@ class ClientUI (
     }
 
     private fun exit() {
-        println("Goodbye. You orders are cancelled")
-        exitProcess(0)
+        println("Goodbye.")
+        throw ExitProfileException()
     }
 
     private fun seeMyCurrentOrders() {
-        val orders = orderService.getCookingOrders()
+        val orders = orderService.getCookingOrdersByUser(client.username)
         if (orders.isEmpty()) {
-            println("You have no current orders")
+            println("You have no cooking orders")
         } else {
             for ((index, order) in orders.withIndex()) {
                 println("${index + 1}. $order")
@@ -69,7 +94,7 @@ class ClientUI (
     }
 
     private fun makeOrder() {
-        val orderBuilder = OrderBuilder()
+        val orderBuilder = OrderBuilder().setUsername(client.username).setTime(System.currentTimeMillis())
         while (true) {
             println("1. Add item")
             println("2. Submit order")
@@ -77,7 +102,11 @@ class ClientUI (
             print("Enter your choice: ")
             when (inputReader.readChoice()) {
                 1 -> addItem(orderBuilder)
-                2 -> submitOrder(orderBuilder)
+                2 -> {
+                    submitOrder(orderBuilder)
+                    return
+                }
+
                 3 -> return
                 else -> println("Invalid choice")
             }
@@ -87,17 +116,7 @@ class ClientUI (
     private fun submitOrder(orderBuilder: OrderBuilder) {
         val order = orderBuilder.build()
         println("Order submitted. The total price is ${order.price} and the preparation time is ${order.preparationTimeMin} minutes.")
-        orderService.placeOrder(order) {
-            println("Your order is ready")
-            payForOrder(order)
-        }
-    }
-
-    private fun payForOrder(order: Order) {
-        println("1. Pay for the order (total price: ${order.price})")
-        print("Enter your choice: ")
-        if (inputReader.readChoice() == 1) println("Payment successful")
-        else println("Invalid choice")
+        orderService.placeOrder(order)
     }
 
     private fun addItem(orderBuilder: OrderBuilder) {
@@ -119,6 +138,7 @@ class ClientUI (
         println("1. Make order")
         println("2. See my current orders")
         println("3. Cancel order")
-        println("4. Exit")
+        println("4. Pay for orders")
+        println("5. Exit")
     }
 }

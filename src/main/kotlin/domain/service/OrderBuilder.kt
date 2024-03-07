@@ -5,13 +5,29 @@ import com.ilyanvk.domain.model.Order
 import com.ilyanvk.domain.model.util.OrderStatus
 
 class OrderBuilder {
-    private val _items = mutableMapOf<MenuItem, Int>()
+    private var id = 0
+    private var username = ""
+    private var time = System.currentTimeMillis()
+    private val items = mutableMapOf<MenuItem, Int>()
     private var status = OrderStatus.PLACED
-    val items: Map<MenuItem, Int>
-        get() = _items.toMap()
+
+    fun setId(id: Int): OrderBuilder {
+        this.id = id
+        return this
+    }
+
+    fun setUsername(username: String): OrderBuilder {
+        this.username = username
+        return this
+    }
+
+    fun setTime(time: Long): OrderBuilder {
+        this.time = time
+        return this
+    }
 
     fun addItem(item: MenuItem): OrderBuilder {
-        _items[item] = (_items[item] ?: 0) + 1
+        items[item] = (items[item] ?: 0) + 1
         return this
     }
 
@@ -21,6 +37,6 @@ class OrderBuilder {
     }
 
     fun build(): Order {
-        return Order(_items, status)
+        return Order(id, username, time, items, status)
     }
 }

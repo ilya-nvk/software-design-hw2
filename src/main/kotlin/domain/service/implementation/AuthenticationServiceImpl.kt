@@ -24,4 +24,8 @@ class AuthenticationServiceImpl(
         currentUser = user
         return user
     }
+
+    override fun logout() {
+        currentUser = null
+    }
 }

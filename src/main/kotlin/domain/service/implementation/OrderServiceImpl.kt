@@ -13,25 +13,49 @@ import kotlinx.coroutines.launch
 class OrderServiceImpl(
     private val orderRepository: OrderRepository,
 ) : OrderService {
-    private val cookingOrders = mutableMapOf<Order, Job>()
+    private val orderJobs = mutableMapOf<Int, Job>()
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
-    override fun getCookingOrders(): List<Order> = cookingOrders.keys.toList()
-
-    override fun placeOrder(order: Order, onCooked: () -> Unit) {
-        val newOrder = order.copy(status = OrderStatus.COOKING)
-        cookingOrders[newOrder] = coroutineScope.launch {
-            delay(order.preparationTimeMin * 60 * 1000L) // 1 min = 1 second
-            onCooked()
-            cookingOrders.remove(newOrder)
-            orderRepository.placeOrder(newOrder.copy(status = OrderStatus.READY))
+    init {
+        val orders = orderRepository.getAllOrders()
+        orders.filter { it.status == OrderStatus.COOKING }.forEach {
+            orderJobs[it.id] = coroutineScope.launch {
+                delay(it.preparationTimeMin * 1000L - (System.currentTimeMillis() - it.time)) // 1 min = 1 second
+                orderRepository.updateOrder(it.copy(status = OrderStatus.COOKED))
+                println("Order for client '${it.username}' is ready!")
+            }
         }
     }
 
-    override fun cancelOrder(order: Order) {
-        cookingOrders[order]?.cancel() ?: {
-            throw IllegalArgumentException("Order not found")
+    override fun getCookingOrders(): List<Order> =
+        orderRepository.getAllOrders().filter { it.status == OrderStatus.COOKING }.toList()
+
+    override fun getCookingOrdersByUser(username: String): List<Order> =
+        orderRepository.getAllOrders().filter { it.status == OrderStatus.COOKING && it.username == username }.toList()
+
+    override fun getOrdersToPay(username: String): List<Order> =
+        orderRepository.getAllOrders().filter { it.status == OrderStatus.COOKED && it.username == username }
+
+    override fun getAllOrders(): List<Order> = orderRepository.getAllOrders()
+
+    override fun placeOrder(order: Order) {
+        val newOrder = order.copy(id = (orderRepository.getAllOrders().maxByOrNull { it.id }?.id ?: 0) + 1)
+        orderJobs[newOrder.id] = coroutineScope.launch {
+            orderRepository.placeOrder(newOrder.copy(status = OrderStatus.PLACED))
+            orderRepository.updateOrder(newOrder.copy(status = OrderStatus.COOKING))
+            delay(newOrder.preparationTimeMin * 1000L) // 1 min = 1 second
+            orderRepository.updateOrder(newOrder.copy(status = OrderStatus.COOKED))
+            println("Order for client '${newOrder.username}' is ready!")
         }
-        cookingOrders.remove(order)
+    }
+
+    override fun payForOrder(order: Order) {
+        orderRepository.updateOrder(order.copy(status = OrderStatus.PAYED))
+    }
+
+    override fun cancelOrder(order: Order) {
+        orderJobs[order.id]?.cancel()
+        orderJobs.remove(order.id)
+        orderRepository.updateOrder(order.copy(status = OrderStatus.CANCELLED))
     }
 }
